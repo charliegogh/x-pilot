@@ -6,12 +6,12 @@ import zhCN from 'antd/es/locale/zh_CN'
 const rootElement = document.getElementById('root') as HTMLElement
 const root = createRoot(rootElement)
 
-import '../styles/index.scss'
+import '../styles/index.less'
 
 root.render(
   <ConfigProvider
     theme={{
-      algorithm: theme.darkAlgorithm
+      algorithm: theme.defaultAlgorithm
     }}
     locale={zhCN}>
     <App/>

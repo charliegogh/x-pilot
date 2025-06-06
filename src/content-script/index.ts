@@ -1,44 +1,39 @@
-import './index.scss'
 import eventBus from '~/eventBus'
-import crxCache from '~/utils/cache'
 
-if (import.meta.env.MODE === 'production') {
-  try {
-    const xhr = new XMLHttpRequest()
-    xhr.open('GET', chrome?.runtime.getURL('.vite/manifest.json'), false) // 第三个参数为 false 表示同步请求
-    xhr.send(null)
+eventBus.on('getPageData', (params, cb) => {
+  // 第一优先级
+  let elements = document.querySelectorAll('.js-studyAchievement')
 
-    if (xhr.status === 200) {
-      const manifest = JSON.parse(xhr.responseText)
-      const jsPath = manifest['src/inject-script/index.ts'].file // 从 manifest.json 中获取打包后的路径
-      const tmp = document.createElement('script')
-      tmp.src = chrome?.runtime.getURL(jsPath)
-      tmp.setAttribute('type', 'module')
-      document.head.appendChild(tmp)
-    } else {
-      console.error('Error loading manifest: ', xhr.status)
-    }
-  } catch (error) {
-    console.error('Error loading manifest:', error)
+  // 第二优先级
+  if (!elements || elements.length === 0) {
+    elements = document.querySelectorAll('.ChapterContainerWrap')
   }
-}
 
-if (import.meta.env.MODE === 'development') {
-  const jsPath = 'src/inject-script/index.ts.js' // 从 manifest.json 中获取打包后的路径
-  const tmp = document.createElement('script')
-  tmp.src = chrome?.runtime.getURL(jsPath)
-  tmp.setAttribute('type', 'module')
-  document.head.appendChild(tmp)
-}
-window.addEventListener('message', e => {
-  if (e.data.streamData) {
-    crxCache.setItem('liblib_cache', e.data.streamData)
-    eventBus.emit('liblib_cache', e.data.streamData)
+  let content = ''
+
+  if (elements && elements.length > 0) {
+    content = Array.from(elements).map(el => el.textContent?.trim() || '').join('\n')
+  } else {
+    // 第三级：标准爬取策略（标题 + 段落）
+    const titles = Array.from(document.querySelectorAll('h1,h2,h3,h4,h5,h6'))
+    const paragraphs = Array.from(document.querySelectorAll('p'))
+
+    const titleText = titles.map(el => `# ${el.textContent?.trim() || ''}`).join('\n')
+    const paragraphText = paragraphs.map(el => el.textContent?.trim() || '').join('\n\n')
+
+    content = `${titleText}\n\n${paragraphText}`
   }
-  if (e.data.handleView) {
-    console.log(e.data.handleView)
+
+  const meta = (name: string) => {
+    const el = document.querySelector(`meta[name="${name}"]`)
+    return el?.getAttribute('content') || ''
   }
-})
-eventBus.on('handleView', (record) => {
-  console.log(record)
+  console.log(document.title, '开始获取网页数据')
+  cb({
+    title: document.title || '',
+    content,
+    keywords: meta('keywords'),
+    description: meta('description'),
+    url: location.href
+  })
 })

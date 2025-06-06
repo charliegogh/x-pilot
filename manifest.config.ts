@@ -29,26 +29,19 @@ export default defineManifest(async(env) => ({
     {
       all_frames: true,
       js: ['src/content-script/index.ts'],
-      // matches: ['*://*/*'],
-      matches: [
-        'https://www.liblib.art/*'
-      ],
-      run_at: 'document_start'
+      matches: ['*://*/*'],
+      run_at: 'document_end'
     },
     {
       all_frames: true,
       js: ['src/inject-script/index.ts'],
       run_at: 'document_start',
-      // matches: ['*://*/*'],
-      matches: [
-        'https://www.liblib.art/*'
-      ]
+      matches: ['*://*/*']
     }
   ],
-  // host_permissions: ['*://*/*'],
-  host_permissions: ['https://www.liblib.art/*'],
+  host_permissions: ['*://*/*'],
   options_page: 'src/options/index.html',
-  permissions: ['storage', 'activeTab', 'sidePanel', 'scripting'],
+  permissions: ['storage', 'activeTab', 'sidePanel', 'scripting', 'tabs', 'windows'],
   side_panel: {
     default_path: 'src/tabs/sidepanel.html'
   },
@@ -68,10 +61,6 @@ export default defineManifest(async(env) => ({
     {
       matches: ['*://*/*'],
       resources: ['.vite/manifest.json']
-    },
-    {
-      matches: ['*://*/*'],
-      resources: ['src/tabs/xlsx.full.min.js']
     }
   ]
 }))

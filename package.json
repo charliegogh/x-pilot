@@ -2,9 +2,16 @@
   "dependencies": {
     "ajax-hook": "^3.0.2",
     "antd": "^5.10.1",
+    "dayjs": "^1.11.11",
+    "highlight.js": "^11.11.1",
+    "marked": "^15.0.12",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.15.0"
+    "react-markdown": "^9.0.1",
+    "react-router-dom": "^6.15.0",
+    "remark-gfm": "^4.0.0",
+    "remark-html": "^16.0.1",
+    "@modelcontextprotocol/sdk": "^1.8.0"
   },
   "description": "x-pilot",
   "devDependencies": {
@@ -26,10 +33,10 @@
     "eslint-plugin-react": "^7.32.2",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.1",
+    "less": "^4.2.0",
     "postcss": "^8.4.28",
     "prettier": "^3.0.2",
     "prettier-plugin-tailwindcss": "^0.5.3",
-    "sass": "^1.66.1",
     "tailwindcss": "^3.3.3",
     "typescript": "^5.2.2",
     "unplugin-auto-import": "^0.16.6",
@@ -39,8 +46,8 @@
     "vite-plugin-vue-devtools": "^7.3.6",
     "webext-bridge": "^6.0.1"
   },
-  "displayName": "今晚打老虎",
-  "name": "今晚打老虎",
+  "displayName": "x-pilot",
+  "name": "x-pilot",
   "overrides": {
     "@crxjs/vite-plugin": "$@crxjs/vite-plugin"
   },
@@ -58,6 +65,7 @@
   "private": true,
   "scripts": {
     "build": "vite build",
+    "build:app": "vite build -c vite.app.config.ts",
     "build:chrome": "vite build -c vite.chrome.config.ts",
     "dev": "vite",
     "dev:chrome": "vite -c vite.chrome.config.ts",

@@ -3,14 +3,14 @@ module.exports = {
     "browser": true,
     "es2021": true
   },
+  "globals": {
+    "chrome": "readonly"
+  },
   "extends": [
     "eslint:recommended",
     "plugin:@typescript-eslint/recommended",
     "plugin:react/recommended"
   ],
-  "globals": {
-    "chrome":"readonly"
-  },
   "overrides": [
     {
       "env": {
@@ -34,7 +34,9 @@ module.exports = {
     "react"
   ],
   "rules": {
-    "@typescript-eslint/no-explicit-any": ["off"],
+    // 允许any
+    '@typescript-eslint/no-explicit-any': 'off',
+    // 允许空函数引用
     '@typescript-eslint/no-empty-function': 'off',
     "react/react-in-jsx-scope": "off",
     // 强制getter和setter成对出现

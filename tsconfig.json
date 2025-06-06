@@ -27,7 +27,6 @@
     "types": [
       "unplugin-icons/types/vue",
       "webextension-polyfill",
-      "chrome-types",
       "chrome"
     ]
   },

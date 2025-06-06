@@ -1,0 +1,25 @@
+@import "reset";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@import "font/iconfont.css";
+@import "message";
+
+html, body, #root{
+  height: 100%;
+}
+
+@keyframes pulse-scale {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.4);
+    opacity: 1;
+  }
+}
+
+.animate-pulse-scale {
+  animation: pulse-scale 1.2s ease-in-out infinite;
+}

@@ -1,25 +1,45 @@
-type EventCallback = (event: any) => void;
+type EventCallback = (params: any, sendResponse: (data: any) => void) => void
+
+// 获取当前活动标签页
 const getCurrentTab = async() => {
-  const queryOptions = { active: true, currentWindow: true }
-  const [tab] = await chrome.tabs.query(queryOptions)
-  return tab
+  return new Promise<chrome.tabs.Tab>((resolve) => {
+    chrome.runtime.sendMessage({ action: 'get-current-visible-tab' }, (tab) => {
+      resolve(tab)
+    })
+  })
 }
+
 const eventBus = {
-  emit(event:string, params:any):void {
-    chrome.runtime.sendMessage({ action: event, options: params })
+  emit(event: string, params: any): void {
+    chrome.runtime.sendMessage({ action: event, params })
   },
-  async emitContentScript(event:string, params:any):void {
+
+  // popup → content-script（通过 background 中转）
+  async emitContentScript(event: string, params: any): Promise<any> {
     const tab = await getCurrentTab()
-    chrome.tabs.sendMessage(tab.id!, { action: event, options: params })
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage(
+        {
+          action: '__TO_CONTENT_SCRIPT__',
+          innerAction: event,
+          params,
+          tabId: tab.id
+        },
+        (response) => {
+          resolve(response)
+        }
+      )
+    })
   },
-  on(event:string, callback:EventCallback) {
-    if (!chrome.runtime) {
-      return
-    }
-    chrome.runtime.onMessage.addListener(
-      (event) => {
-        callback(event)
-      })
+
+  // content-script 监听消息
+  on(event: string, callback: EventCallback) {
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      if (message.action === event) {
+        callback(message.params, sendResponse)
+        return true
+      }
+    })
   }
 }
 
