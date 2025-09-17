@@ -77,7 +77,7 @@ const ChatList: React.FC<ChatListProps> = ({ messages = [] }) => {
       {showWelcome && (
         <div className='max-w-[100%] rounded-xl text-sm py-3 px-4 pl-12 text-gray-800 animate-fade-in mt-8'>
           <div className='prose-sm max-w-none'>
-            <h1 className='text-xl mb-2'>👋 欢迎使用 <strong>知网研学 AI 助手</strong>！</h1>
+            <h1 className='text-xl mb-2'>👋 欢迎使用 <strong>小研 AI 助手</strong>！</h1>
             <p className='mb-2'>我是您的智能科研助手，支持：</p>
             <ul className='list-disc pl-5'>
               <li>📄 一键总结网页内容</li>

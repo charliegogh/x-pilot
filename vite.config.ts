@@ -76,7 +76,5 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
-    include: ['vue', '@vueuse/core'],
-    exclude: ['vue-demi']
   }
 })

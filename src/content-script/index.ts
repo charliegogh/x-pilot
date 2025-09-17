@@ -1,5 +1,4 @@
 import eventBus from '~/eventBus'
-
 eventBus.on('getPageData', (params, cb) => {
   // 第一优先级
   let elements = document.querySelectorAll('.js-studyAchievement')
@@ -37,3 +36,4 @@ eventBus.on('getPageData', (params, cb) => {
     url: location.href
   })
 })
+

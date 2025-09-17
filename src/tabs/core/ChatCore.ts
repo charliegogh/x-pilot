@@ -147,6 +147,7 @@ class ChatCore {
 
     client.configureCallbacks({
       onMessage: (chunk) => {
+        console.log(chunk)
         this.applyResponseChunk({ payload: { choices: { text: [{ content: chunk }] }}})
         this.emitCallback(this.messages)
       },

@@ -13,7 +13,7 @@
     "remark-html": "^16.0.1",
     "@modelcontextprotocol/sdk": "^1.8.0"
   },
-  "description": "x-pilot",
+  "description": "小研AI助手",
   "devDependencies": {
     "@crxjs/vite-plugin": "^2.0.0-beta.25",
     "@iconify-json/mdi": "^1.1.54",
@@ -46,8 +46,8 @@
     "vite-plugin-vue-devtools": "^7.3.6",
     "webext-bridge": "^6.0.1"
   },
-  "displayName": "x-pilot",
-  "name": "x-pilot",
+  "displayName": "小研AI助手",
+  "name": "小研AI助手",
   "overrides": {
     "@crxjs/vite-plugin": "$@crxjs/vite-plugin"
   },

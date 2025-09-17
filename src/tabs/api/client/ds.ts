@@ -47,7 +47,7 @@ class ChatClient {
     this.abort() // 取消上一个请求
     this.messageList = messages
     this.contentBuffer = ''
-    this.status = 'streaming'
+    this.status = 'pending'
 
     try {
       this.controller = new AbortController()
@@ -66,17 +66,17 @@ class ChatClient {
             {
               'type': 'function',
               'function': {
-                'name': 'get_weather',
-                'description': 'Get weather of an location, the user shoud supply a location first',
+                'name': 'nlquery',
+                'description': '当用户使用‘推荐、获取、查找、找一下、检索、文章、论文、文献’等关键词，表达对某一主题、领域、关键词等内容的文献获取意图，且没有提供时间范围、机构、作者等结构化要素时，调用该工具。例如：‘找几篇情绪价值相关的核心期刊论文’、‘获取人工智能教育的CSSCI论文’。',
                 'parameters': {
                   'type': 'object',
                   'properties': {
-                    'location': {
+                    'query': {
                       'type': 'string',
-                      'description': 'The city and state, e.g. San Francisco, CA'
+                      'description': '用户的文献检索请求'
                     }
                   },
-                  'required': ['location']
+                  'required': ['query']
                 }
               }
             }

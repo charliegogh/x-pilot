@@ -13,7 +13,7 @@ export class ToolCallAggregator {
       if (!this.calls[id]) {
         this.calls[id] = {
           id,
-          name: call.function.name || '', // ✅ 初始 name 存储
+          name: call.function.name || '',
           arguments: ''
         }
       }
