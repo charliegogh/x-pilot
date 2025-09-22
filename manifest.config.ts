@@ -20,7 +20,7 @@ export default defineManifest(async(env) => ({
   manifest_version: 3,
   // key: 'ekgmcbpgglflmgcfajnglpbcbdccnnje',
   action: {
-    // default_popup: 'src/popup/index.html',
+    default_popup: 'src/popup/index.html',
   },
   background: {
     service_worker: 'src/background/index.ts'
@@ -61,6 +61,10 @@ export default defineManifest(async(env) => ({
     {
       matches: ['*://*/*'],
       resources: ['.vite/manifest.json']
+    },
+    {
+      matches: ['*://*/*'],
+      resources: ['src/tabs/sidepanel.html']
     }
   ]
 }))

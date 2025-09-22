@@ -6,6 +6,7 @@ export interface ChatMessage {
     content: string
     tool_calls?:any
     tool_call_id?:any
-    status?: 'pending' | 'streaming' | 'done' | 'error' | 'aborted'
+    pageContent?:string
+    status?: 'pending' | 'streaming' | 'done' | 'error' | 'aborted' | undefined
 }
 

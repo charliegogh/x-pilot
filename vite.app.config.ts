@@ -15,10 +15,10 @@ export default defineConfig({
     react()
   ],
   server: {
-    port: 8888,
+    port: 7888,
     strictPort: true,
     hmr: {
-      port: 8889,
+      port: 7889,
       overlay: false
     }
   },

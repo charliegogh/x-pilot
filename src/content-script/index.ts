@@ -7,6 +7,10 @@ eventBus.on('getPageData', (params, cb) => {
   if (!elements || elements.length === 0) {
     elements = document.querySelectorAll('.ChapterContainerWrap')
   }
+  // 第二优先级
+  if (!elements || elements.length === 0) {
+    elements = document.querySelectorAll('.learn-con')
+  }
 
   let content = ''
 
@@ -27,7 +31,7 @@ eventBus.on('getPageData', (params, cb) => {
     const el = document.querySelector(`meta[name="${name}"]`)
     return el?.getAttribute('content') || ''
   }
-  console.log(document.title, '开始获取网页数据')
+  console.warn('>>>>>开始抓取网页数据')
   cb({
     title: document.title || '',
     content,

@@ -26,10 +26,6 @@ export default defineConfig({
           baseRoute: 'options'
         },
         {
-          dir: 'src/popup/pages',
-          baseRoute: 'popup'
-        },
-        {
           dir: 'src/content-script/iframe/pages',
           baseRoute: 'iframe'
         },
@@ -68,10 +64,10 @@ export default defineConfig({
     }
   },
   server: {
-    port: 8888,
+    port: 7888,
     strictPort: true,
     hmr: {
-      port: 8889,
+      port: 7889,
       overlay: false
     }
   },

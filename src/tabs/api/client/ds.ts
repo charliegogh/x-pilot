@@ -2,7 +2,7 @@ import { parseStreamChunk } from './parseStreamChunk'
 import { ToolCallAggregator } from './ToolCallAggregator'
 import type { ChatMessage } from '~/tabs/types/chat'
 
-export type ChatClientStatus = 'init' | 'streaming' | 'done' | 'error';
+export type ChatClientStatus = 'init' | 'pending' | 'streaming' | 'done' | 'error';
 
 interface ChatClientCallbacks {
   onMessage?: (text: string) => void;
@@ -61,26 +61,7 @@ class ChatClient {
         body: JSON.stringify({
           model: 'deepseek-chat',
           messages: this.messageList,
-          stream: true,
-          tools: [
-            {
-              'type': 'function',
-              'function': {
-                'name': 'nlquery',
-                'description': '当用户使用‘推荐、获取、查找、找一下、检索、文章、论文、文献’等关键词，表达对某一主题、领域、关键词等内容的文献获取意图，且没有提供时间范围、机构、作者等结构化要素时，调用该工具。例如：‘找几篇情绪价值相关的核心期刊论文’、‘获取人工智能教育的CSSCI论文’。',
-                'parameters': {
-                  'type': 'object',
-                  'properties': {
-                    'query': {
-                      'type': 'string',
-                      'description': '用户的文献检索请求'
-                    }
-                  },
-                  'required': ['query']
-                }
-              }
-            }
-          ]
+          stream: true
         }),
         signal: this.controller.signal
       })
@@ -144,7 +125,6 @@ class ChatClient {
           type: 'function';
           function: { name: string; arguments: any };
         }[] = this.toolCallAggregator.getFinalToolCalls()
-        console.log(toolCalls, '~~~~~~~~~~~~~~~~~')
         this.callbacks.onToolCall?.(toolCalls)
         break
       }

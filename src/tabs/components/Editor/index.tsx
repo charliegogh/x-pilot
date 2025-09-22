@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react'
 import ToolMenu from './ToolMenu'
 import ChatInput from './ChatInput'
+import GetPageData from './GetPageData'
 
 type EditorProps = {
     chat: any;
@@ -29,7 +30,7 @@ const Editor: React.FC<EditorProps> = ({ chat }) => {
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const [showMenu, setShowMenu] = useState(false)
-  const [activeMenuItem, setActiveMenuItem] = useState<null | typeof menuList[0]>(null)
+  const [activeMenuItem, setActiveMenuItem] = useState<null | typeof menuList[0]>(menuList[0]) // 默认高亮第一个
 
   useEffect(() => {
     const handleClickOutside = (event: any) => {
@@ -54,6 +55,12 @@ const Editor: React.FC<EditorProps> = ({ chat }) => {
     inputRef.current?.focus()
   }, [chat])
 
+  useEffect(() => {
+    if (chat && activeMenuItem) {
+      activeMenuItem.action(chat)
+    }
+  }, [chat, activeMenuItem])
+
   const handleMenuClick = async(item: typeof menuList[0]) => {
     setShowMenu(false)
     await item.action(chat)
@@ -73,14 +80,18 @@ const Editor: React.FC<EditorProps> = ({ chat }) => {
   return (
     <div className='w-full'>
       <div className='px-4 m-auto relative flex flex-col items-start'>
-        <ToolMenu
-          show={showMenu}
-          active={activeMenuItem}
-          onToggle={() => setShowMenu(prev => !prev)}
-          onSelect={handleMenuClick}
-          onClose={handleCloseMode}
-          menuList={menuList}
-        />
+        <div className='flex'>
+          <ToolMenu
+            show={showMenu}
+            active={activeMenuItem}
+            onToggle={() => setShowMenu(prev => !prev)}
+            onSelect={handleMenuClick}
+            onClose={handleCloseMode}
+            menuList={menuList}
+          />
+          <GetPageData></GetPageData>
+        </div>
+
         <ChatInput chat={chat} inputRef={inputRef} buttonRef={buttonRef} />
       </div>
     </div>

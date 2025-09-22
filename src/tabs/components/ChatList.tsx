@@ -66,11 +66,8 @@ const ChatList: React.FC<ChatListProps> = ({ messages = [] }) => {
     }
   }, [messages])
 
-  const getMessageStyle = (role: string) => {
-    return role === 'user'
-      ? 'bg-blue-500 text-white ml-auto px-4'
-      : 'bg-gray-100 text-gray-800 mr-auto'
-  }
+  const getMessageStyle = (role: string) =>
+  { return role === 'user' ? 'bg-blue-500 text-white ml-auto px-2' : 'bg-gray-100 text-gray-800 mr-auto' }
 
   return (
     <div className='w-full h-full p-4 overflow-y-auto space-y-2'>
@@ -88,25 +85,54 @@ const ChatList: React.FC<ChatListProps> = ({ messages = [] }) => {
           </div>
         </div>
       )}
-
       {messages
         .filter(msg => msg && msg.role !== 'system')
         .map(msg => (
-          <div key={msg.id} className='flex'>
-            <div className={`max-w-[100%] rounded-xl text-sm py-2 ${getMessageStyle(msg.role)}`}>
+          <div key={msg.id} className='flex flex-col max-w-[100%]'>
+            <div className={`rounded-xl text-sm py-1 ${getMessageStyle(msg.role)}`}>
               {msg.status === 'pending' ? (
                 <span className='flex gap-1 items-center h-6 pl-2'>
                   <span className='w-3 h-3 rounded-full bg-blue-500 animate-pulse-scale'></span>
                 </span>
               ) : (
                 <div
-                  className='chat-content prose-sm max-w-none'
+                  className='chat-content prose-sm max-w-none px-2'
                   dangerouslySetInnerHTML={{
                     __html: renderMarkdown(getContentAsMarkdown(msg.content))
                   }}
                 />
               )}
             </div>
+
+            {/* 复制按钮：仅当消息生成完时显示 */}
+            {msg.status === 'done' && msg.role === 'assistant' && (
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(
+                    JSON.stringify(msg.content, null, 2)
+                  ).then(() => {
+                    const btn = document.getElementById(`copy-btn-${msg.id}`)
+                    if (btn) {
+                      btn.textContent = '✅ 已复制'
+                      setTimeout(() => { btn.textContent = '📋 复制' }, 1200)
+                    }
+                  })
+                }}
+                id={`copy-btn-${msg.id}`}
+                className='
+    self-start text-xs
+    px-3
+    rounded-full
+    bg-gray-100 text-gray-600
+    border border-gray-300
+    transition-colors duration-200
+    cursor-pointer
+    select-none
+  '
+              >
+                    📋 复制
+              </button>
+            )}
           </div>
         ))}
       <div ref={chatEndRef} />

@@ -25,14 +25,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 })
 
 chrome.action.onClicked.addListener((tab) => {
-  chrome.sidePanel.setOptions({
-    tabId: tab.id,
-    path: '/src/tabs/sidepanel.html'
-  })
-  // @ts-ignore
-  chrome.sidePanel?.open({
-    tabId: tab.id
-  })
+  if (!tab.id) return
+  chrome.tabs.sendMessage(tab.id, { action: 'toggle-sidepanel' })
 })
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
