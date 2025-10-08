@@ -147,7 +147,6 @@ class ChatCore {
 
     client.configureCallbacks({
       onMessage: (chunk) => {
-        console.log(chunk)
         this.applyResponseChunk({ payload: { choices: { text: [{ content: chunk }] }}})
         this.emitCallback(this.messages)
       },
@@ -226,11 +225,7 @@ class ChatCore {
   private getValidMessagesForSend(extra: ChatMessage[] = []): ChatMessage[] {
     return [
       ...this.messages
-        .filter(m => !('tool_calls' in m))
-        .map(m => {
-          const { status, ...rest } = m
-          return rest
-        }),
+        .filter(m => !('tool_calls' in m)),
       ...extra
     ]
   }
@@ -272,6 +267,7 @@ class ChatCore {
       content,
       status: 'done'
     }
+    this.messages = this.messages.filter(msg => msg.role !== 'system')
     this.messages = [systemMessage, ...this.messages]
   }
 }
