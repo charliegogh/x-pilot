@@ -12,13 +12,6 @@ interface ChatCoreOptions {
   onEmit: (messages: ChatMessage[]) => Promise<void>;
 }
 
-const localToolMap: Record<string, (args: any) => Promise<any>> = {
-  get_weather: async({ query, limit }: { query: string, limit: string }) => {
-    console.log(query, limit)
-    return { weather: `${query} 晴天 52℃` }
-  }
-}
-
 class ChatCore {
   public messages: ChatMessage[] = []
   private status: ChatStatus = 'idle'
@@ -97,7 +90,7 @@ class ChatCore {
 
   public async send(): Promise<void> {
     const trimmedContent = this.inputValue.trim()
-    if (!trimmedContent && !this.messages.some(m => m.role === 'tool')) return
+    if (!trimmedContent) return
     if (this.isLoading()) return
 
     const tool = this.getCurrentTool()
@@ -120,92 +113,37 @@ class ChatCore {
 
     this.status = 'loading'
     const timestamp = Date.now()
-
-    if (trimmedContent) {
-      const newMessages: ChatMessage[] = [
-        {
-          id: `${timestamp}_user`,
-          role: 'user',
-          content: trimmedContent,
-          status: 'done'
-        },
-        {
-          id: timestamp,
-          role: 'assistant',
-          content: '',
-          status: 'pending'
-        }
-      ]
-      this.currentMessageId = timestamp
-      this.inputValue = ''
-      if (this.inputField) this.inputField.value = ''
-      this.appendMessages(newMessages)
-    }
+    this.currentMessageId = timestamp
+    const newMessages: ChatMessage[] = [
+      {
+        id: `${timestamp}_user`,
+        role: 'user',
+        content: trimmedContent,
+        status: 'done'
+      },
+      {
+        id: timestamp,
+        role: 'assistant',
+        content: '',
+        status: 'pending'
+      }
+    ]
+    this.inputValue = ''
+    if (this.inputField) this.inputField.value = ''
+    this.appendMessages(newMessages)
 
     await this.emitCallback(this.messages.filter(msg => msg.status !== 'pending'))
     this.status = 'streaming'
 
     client.configureCallbacks({
-      onMessage: (chunk) => {
+      onMessage: async(chunk) => {
         this.applyResponseChunk({ payload: { choices: { text: [{ content: chunk }] }}})
-        this.emitCallback(this.messages)
+        await this.emitCallback(this.messages)
       },
-
-      onToolCall: async(toolCalls) => {
-        const lastIndex = this.messages.length - 1
-        const mcpToolMessages: any[] = []
-        this.messages[lastIndex].status = 'pending'
-        this.status = 'streaming'
-
-        for (const call of toolCalls) {
-          const fn = localToolMap[call.function.name]
-          const rawArgs = call.function.arguments
-
-          let parsedArgs = {}
-          let result = { error: '函数不存在或参数错误' }
-
-          try {
-            parsedArgs = typeof rawArgs === 'string' ? JSON.parse(rawArgs) : rawArgs
-            if (fn) result = await fn(parsedArgs)
-          } catch (e: any) {
-            result = { error: e.message || '执行异常' }
-          }
-
-          mcpToolMessages.push({
-            role: 'tool',
-            tool_call_id: call.id,
-            name: call.function.name,
-            content: JSON.stringify(result)
-          })
-        }
-
-        await client.send([
-          {
-            ...this.messages.find(i => i.id === this.messages[lastIndex].id + '_user')
-          },
-          {
-            id: timestamp,
-            role: 'assistant',
-            tool_calls: toolCalls.map(tc => ({
-              ...tc,
-              function: {
-                ...tc.function,
-                arguments: typeof tc.function.arguments === 'string'
-                  ? tc.function.arguments
-                  : JSON.stringify(tc.function.arguments)
-              }
-            })),
-            content: '',
-            status: 'done'
-          },
-          ...mcpToolMessages
-        ])
-      },
-
-      onFinish: () => {
+      onFinish: async() => {
         this.applyResponseChunk({ payload: { choices: { text: [{ content: '' }], status: 2 }}})
         this.status = 'idle'
-        this.emitCallback(this.messages)
+        await this.emitCallback(this.messages)
       },
 
       onError: (err) => {
@@ -223,11 +161,7 @@ class ChatCore {
   }
 
   private getValidMessagesForSend(extra: ChatMessage[] = []): ChatMessage[] {
-    return [
-      ...this.messages
-        .filter(m => !('tool_calls' in m)),
-      ...extra
-    ]
+    return [...this.messages.filter(m => m.status !== 'pending'), ...extra]
   }
 
   public abort(): void {
@@ -256,8 +190,6 @@ class ChatCore {
     if (chunk) message.content += chunk
     message.status = isFinished ? 'done' : 'streaming'
     if (isFinished) this.status = 'idle'
-
-    this.appendMessages([])
   }
 
   public addSystemMessage(content: string): void {

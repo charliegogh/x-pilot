@@ -9,7 +9,6 @@ interface ModelSelectorProps {
 
 const modelOptions = [
   { id: 'deepseek', label: 'DeepSeek' },
-  { id: 'glm', label: 'GLM-4-Plus' },
   { id: 'Qwen3', label: 'Qwen3-mcp' }
 ]
 

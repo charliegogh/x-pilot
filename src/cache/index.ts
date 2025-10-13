@@ -1,4 +1,3 @@
-//
 // class CrxCache {
 //   setItem(key, value) {
 //     if (chrome.storage) {

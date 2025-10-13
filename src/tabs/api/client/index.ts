@@ -14,11 +14,11 @@ export interface ChatClient {
 export async function loadClientByModel(model:string): Promise<ChatClient> {
   switch (model) {
     case 'deepseek':
-      return (await import('./ds')).default
+      return (await import('./deepSeek/index')).default
     case 'glm':
       return (await import('./glm')).default
     case 'Qwen3':
-      return (await import('./Qwen3')).default
+      return (await import('./Qwen/index')).default
     default:
       throw new Error(`未支持的模型类型: ${model}`)
   }
