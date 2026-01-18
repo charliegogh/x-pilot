@@ -9,10 +9,11 @@ export abstract class BaseLLMStreamClient {
   protected contentBuffer = ''
   protected controller: AbortController | null = null
   protected callbacks: ChatClientCallbacks = {}
-  // 子类可选钩子，对流片段做二次处理
+
+  /** 子类可选钩子，对流片段做二次处理 */
   protected onStreamChunk?(parsed: ParseStreamChunkResult): void | Promise<void>
 
-  // 使用方结果回调
+  /** 使用方结果回调 */
   public configureCallbacks(callbacks: ChatClientCallbacks): void {
     this.callbacks = callbacks || {}
   }
@@ -74,7 +75,6 @@ export abstract class BaseLLMStreamClient {
         if (done) break
         if (!value) continue
         const parsed = this.parseStreamChunk(value, buffer)
-
         const { contents, isDone, buffer: newBuffer } =
             parsed
         await this.onStreamChunk?.(parsed)

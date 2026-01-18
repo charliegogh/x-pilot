@@ -25,5 +25,16 @@ export interface ParseStreamChunkResult {
     buffer: string,
     sessionId?: string;
 }
+export interface ChatClient {
+    configureCallbacks(callbacks: {
+        onMessage: (chunk: any) => void;
+        onToolCall?: (toolCalls: any[]) => Promise<void>;
+        onFinish?: () => void;
+        onError?: (error: any) => void;
+    }): void;
 
+    send(messages: any[]): Promise<void>;
+
+    abort?: () => void;
+}
 export type ParseStreamChunk = (value: Uint8Array, buffer: string) => ParseStreamChunkResult
