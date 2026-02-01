@@ -1,38 +1,39 @@
 import React, { useState, useEffect } from 'react'
 import Editor from './components/Editor'
 import Main from './components/Main'
-import ChatCore from './core/ChatCore'
+import CustomerServiceChatCore from './core/ChatCore'
 import type { ChatMessage } from '~/tabs/types/chat'
 
 const App = () => {
-  const [chatInstance, setChatInstance] = useState<ChatCore | null>(null)
-  const [messages, setMessages] = useState<ChatMessage[]>(
-    [
-    ]
-  )
+  const [chat, setChat] = useState<CustomerServiceChatCore | null>(null)
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+
+  // 现在先写死，后面直接来自会话列表
+  const sessionId = 'demo-session-001'
 
   useEffect(() => {
-    const chat = new ChatCore({
-      onEmit: async() => {
-        setMessages([...chat.messages])
+    const instance = new CustomerServiceChatCore({
+      sessionId,
+      onEmit: async(msgs) => {
+        setMessages([...msgs])
       }
     })
-
-    const originalAppend = chat['appendMessages'].bind(chat)
-    chat['appendMessages'] = (msg: ChatMessage[], reset = false) => {
-      originalAppend(msg, reset)
-      setMessages([...chat.messages])
+    setChat(instance)
+    setMessages([...instance.messages])
+    return () => {
+      instance.destroy()
     }
-
-    setChatInstance(chat)
-  }, [])
+  }, [sessionId])
 
   return (
-    <div className='flex h-screen w-full flex-col bg-[#F5F6FA] pb-4'>
+    <div className='flex h-screen w-full flex-col bg-[#F5F6FA]'>
+      {/* 对话区 */}
       <div className='flex-1 overflow-y-auto'>
         <Main messages={messages} />
       </div>
-      <Editor chat={chatInstance} />
+
+      {/* 输入区 */}
+      {chat && <Editor chat={chat} />}
     </div>
   )
 }

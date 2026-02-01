@@ -1,43 +1,51 @@
-import { loadClientByModel } from '../api/client'
-import eventBus from '~/eventBus'
-import { xGuidePrompt, chatWidthPagePrompt } from '~/tabs/prompt/prompt'
 import type { ChatMessage } from '~/tabs/types/chat'
 
-type ChatStatus = 'idle' | 'loading' | 'streaming' | 'done' | 'error' | 'aborted'
-
-interface ChatCoreOptions {
-  inputField?: HTMLInputElement | HTMLTextAreaElement | null;
-  sendButton?: HTMLElement | null;
-  defaultInputValue?: string;
-  onEmit: (messages: ChatMessage[]) => Promise<void>;
-}
-
-const localToolMap: Record<string, (args: any) => Promise<any>> = {
-  get_weather: async({ query, limit }: { query: string, limit: string }) => {
-    console.log(query, limit)
-    return { weather: `${query} 晴天 52℃` }
-  }
-}
-
-class ChatCore {
+class CustomerServiceChatCore {
   public messages: ChatMessage[] = []
-  private status: ChatStatus = 'idle'
-  private currentMessageId: string | number = ''
+
+  private sessionId: string
   private inputField: HTMLInputElement | HTMLTextAreaElement | null
   private sendButton: HTMLElement | null
-  private inputValue: string
+  private inputValue = ''
   private emitCallback: (messages: ChatMessage[]) => Promise<void>
-  private currentTool: string | null = null
-  private model: string = 'deepseek'
+  private mockAgentReply: boolean
 
-  constructor(options: ChatCoreOptions) {
-    const urlParams = new URLSearchParams(window.location.search)
-    this.model = urlParams.get('model') || 'deepseek'
+  private inputHandler?: (e: Event) => void
+  private keydownHandler?: (e: KeyboardEvent) => void
+  private clickHandler?: () => void
 
+  constructor(options: {
+        sessionId: string
+        inputField?: HTMLInputElement | HTMLTextAreaElement | null
+        sendButton?: HTMLElement | null
+        onEmit: (messages: ChatMessage[]) => Promise<void>
+        mockAgentReply?: boolean
+    }) {
+    this.sessionId = options.sessionId
     this.inputField = options.inputField || null
     this.sendButton = options.sendButton || null
-    this.inputValue = options.defaultInputValue || ''
     this.emitCallback = options.onEmit
+    this.mockAgentReply = options.mockAgentReply ?? true
+
+    this.loadFromLocal()
+  }
+
+  private getStorageKey(): string {
+    return `customer-service-chat:${this.sessionId}`
+  }
+
+  private saveToLocal() {
+    localStorage.setItem(
+      this.getStorageKey(),
+      JSON.stringify({ messages: this.messages, updatedAt: Date.now() })
+    )
+  }
+
+  private loadFromLocal() {
+    const raw = localStorage.getItem(this.getStorageKey())
+    if (!raw) return
+    const data = JSON.parse(raw)
+    if (Array.isArray(data.messages)) this.messages = data.messages
   }
 
   public setInputField(field: HTMLInputElement | HTMLTextAreaElement) {
@@ -50,226 +58,125 @@ class ChatCore {
     this.bindSendButtonEvents()
   }
 
-  public setCurrentTool(toolName: string | null) {
-    this.currentTool = toolName
-  }
+  private bindInputFieldEvents() {
+    if (!this.inputField) return
 
-  public getCurrentTool(): string | null {
-    return this.currentTool
-  }
+    // 防重复绑定：先解绑再绑
+    if (this.inputHandler) this.inputField.removeEventListener('input', this.inputHandler)
+    if (this.keydownHandler) { // @ts-ignore
+      this.inputField.removeEventListener('keydown', this.keydownHandler)
+    }
 
-  public setModel(model: string) {
-    this.model = model
-  }
+    this.inputHandler = (e) => {
+      this.inputValue = (e.target as HTMLInputElement).value
+    }
 
-  public getModel(): string {
-    return this.model
-  }
-
-  public getStatus(): ChatStatus {
-    return this.status
-  }
-
-  public isLoading(): boolean {
-    return this.status === 'streaming' || this.status === 'loading'
-  }
-
-  private bindInputFieldEvents(): void {
-    this.inputField?.addEventListener('input', (event) => {
-      const target = event.target as HTMLInputElement | HTMLTextAreaElement
-      this.inputValue = target.value
-    })
-
-    this.inputField?.addEventListener('keydown', (event) => {
-      const keyboardEvent = event as KeyboardEvent
-      if (keyboardEvent.key === 'Enter' && !keyboardEvent.shiftKey) {
-        keyboardEvent.preventDefault()
+    this.keydownHandler = (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault()
         this.send()
       }
-    })
-  }
-
-  private bindSendButtonEvents(): void {
-    this.sendButton?.addEventListener('click', () => {
-      this.send()
-    })
-  }
-
-  public async send(): Promise<void> {
-    const trimmedContent = this.inputValue.trim()
-    if (!trimmedContent && !this.messages.some(m => m.role === 'tool')) return
-    if (this.isLoading()) return
-
-    const tool = this.getCurrentTool()
-
-    if (tool === 'chat_with_page') {
-      try {
-        const data = await eventBus?.emitContentScript?.('getPageData', {})
-        const prompt = chatWidthPagePrompt.replace('[CONTENT]', JSON.stringify(data))
-        this.addSystemMessage(prompt)
-      } catch (err) {
-        console.warn('获取网页数据失败:', err)
-      }
     }
 
-    if (tool === 'x_guide') {
-      this.addSystemMessage(xGuidePrompt)
-    }
-
-    const client = await loadClientByModel(this.model)
-
-    this.status = 'loading'
-    const timestamp = Date.now()
-
-    if (trimmedContent) {
-      const newMessages: ChatMessage[] = [
-        {
-          id: `${timestamp}_user`,
-          role: 'user',
-          content: trimmedContent,
-          status: 'done'
-        },
-        {
-          id: timestamp,
-          role: 'assistant',
-          content: '',
-          status: 'pending'
-        }
-      ]
-      this.currentMessageId = timestamp
-      this.inputValue = ''
-      if (this.inputField) this.inputField.value = ''
-      this.appendMessages(newMessages)
-    }
-
-    await this.emitCallback(this.messages.filter(msg => msg.status !== 'pending'))
-    this.status = 'streaming'
-
-    client.configureCallbacks({
-      onMessage: (chunk) => {
-        this.applyResponseChunk({ payload: { choices: { text: [{ content: chunk }] }}})
-        this.emitCallback(this.messages)
-      },
-
-      onToolCall: async(toolCalls) => {
-        const lastIndex = this.messages.length - 1
-        const mcpToolMessages: any[] = []
-        this.messages[lastIndex].status = 'pending'
-        this.status = 'streaming'
-
-        for (const call of toolCalls) {
-          const fn = localToolMap[call.function.name]
-          const rawArgs = call.function.arguments
-
-          let parsedArgs = {}
-          let result = { error: '函数不存在或参数错误' }
-
-          try {
-            parsedArgs = typeof rawArgs === 'string' ? JSON.parse(rawArgs) : rawArgs
-            if (fn) result = await fn(parsedArgs)
-          } catch (e: any) {
-            result = { error: e.message || '执行异常' }
-          }
-
-          mcpToolMessages.push({
-            role: 'tool',
-            tool_call_id: call.id,
-            name: call.function.name,
-            content: JSON.stringify(result)
-          })
-        }
-
-        await client.send([
-          {
-            ...this.messages.find(i => i.id === this.messages[lastIndex].id + '_user')
-          },
-          {
-            id: timestamp,
-            role: 'assistant',
-            tool_calls: toolCalls.map(tc => ({
-              ...tc,
-              function: {
-                ...tc.function,
-                arguments: typeof tc.function.arguments === 'string'
-                  ? tc.function.arguments
-                  : JSON.stringify(tc.function.arguments)
-              }
-            })),
-            content: '',
-            status: 'done'
-          },
-          ...mcpToolMessages
-        ])
-      },
-
-      onFinish: () => {
-        this.applyResponseChunk({ payload: { choices: { text: [{ content: '' }], status: 2 }}})
-        this.status = 'idle'
-        this.emitCallback(this.messages)
-      },
-
-      onError: (err) => {
-        const target = this.messages.find(msg => msg.id === this.currentMessageId)
-        if (target) {
-          target.content = `【错误】：${err}`
-          target.status = 'error'
-        }
-        this.status = 'error'
-        this.emitCallback(this.messages)
-      }
-    })
-
-    await client.send(this.getValidMessagesForSend())
+    this.inputField.addEventListener('input', this.inputHandler)
+    this.inputField.addEventListener('keydown', this.keydownHandler)
   }
 
-  private getValidMessagesForSend(extra: ChatMessage[] = []): ChatMessage[] {
-    return [
-      ...this.messages
-        .filter(m => !('tool_calls' in m)),
-      ...extra
-    ]
+  private bindSendButtonEvents() {
+    if (!this.sendButton) return
+
+    // 防重复绑定：先解绑再绑
+    if (this.clickHandler) this.sendButton.removeEventListener('click', this.clickHandler)
+
+    this.clickHandler = () => this.send()
+    this.sendButton.addEventListener('click', this.clickHandler)
   }
 
-  public abort(): void {
-    if (this.isLoading()) {
-      loadClientByModel(this.model).then(client => client.abort?.())
-      this.status = 'aborted'
-      const target = this.messages.find(msg => msg.id === this.currentMessageId)
-      if (target) {
-        target.status = 'aborted'
-        target.content += ''
-      }
-    }
+  public isSending(): boolean {
+    return this.messages.some(m => m.role === 'user' && m.status === 'sending')
   }
 
-  private appendMessages(newMessages: ChatMessage[], reset: boolean = false): void {
-    this.messages = reset ? newMessages : [...this.messages, ...newMessages]
+  public getMessages(): ChatMessage[] {
+    return [...this.messages]
   }
 
-  public applyResponseChunk(responseData: any): void {
-    const message = this.messages.find(msg => msg.id === this.currentMessageId)
-    if (!message) return
+  public async send() {
+    const content = this.inputValue.trim()
+    if (!content) return
 
-    const chunk = responseData?.payload?.choices?.text?.[0]?.content ?? ''
-    const isFinished = responseData?.payload?.choices?.status === 2
-
-    if (chunk) message.content += chunk
-    message.status = isFinished ? 'done' : 'streaming'
-    if (isFinished) this.status = 'idle'
-
-    this.appendMessages([])
-  }
-
-  public addSystemMessage(content: string): void {
-    const systemMessage: ChatMessage = {
-      id: `system_${Date.now()}`,
-      role: 'system',
+    const msg: ChatMessage = {
+      id: crypto.randomUUID(),
+      sessionId: this.sessionId,
+      role: 'user',
       content,
-      status: 'done'
+      createdAt: Date.now(),
+      read: true,
+      status: 'sending'
     }
-    this.messages = this.messages.filter(msg => msg.role !== 'system')
-    this.messages = [systemMessage, ...this.messages]
+
+    // 本地立即回显
+    this.messages.push(msg)
+    this.inputValue = ''
+    if (this.inputField) this.inputField.value = ''
+
+    this.saveToLocal()
+    await this.emitCallback(this.getMessages())
+
+    try {
+      // 模拟“发送成功”
+      msg.status = 'sent'
+    } catch {
+      msg.status = 'failed'
+    }
+
+    this.saveToLocal()
+    await this.emitCallback(this.getMessages())
+
+    if (this.mockAgentReply && msg.status === 'sent') {
+      this.simulateAgentReply(msg)
+    }
+  }
+
+  private simulateAgentReply(userMsg: ChatMessage) {
+    const delay = 800 + Math.random() * 1200
+    setTimeout(() => {
+      const replyText = this.generateMockReply(String(userMsg.content ?? ''))
+      this.receiveAgentMessage(replyText)
+    }, delay)
+  }
+
+  private generateMockReply(content: string): string {
+    if (/价格|多少钱/.test(content)) return '您好，这款产品目前有优惠活动，具体价格我可以帮您查询。'
+    if (/发货|多久/.test(content)) return '我们一般 24 小时内安排发货，节假日可能略有延迟。'
+    if (/你好|您好|在吗/.test(content)) return '您好，欢迎咨询澳门雪茄在线客服，请问有什么可以帮您？'
+    return '好的，已收到您的消息，我这边帮您确认一下，请稍等。'
+  }
+
+  public receiveAgentMessage(content: string) {
+    const msg: ChatMessage = {
+      id: crypto.randomUUID(),
+      sessionId: this.sessionId,
+      role: 'agent',
+      content,
+      createdAt: Date.now(),
+      read: false,
+      status: 'sent'
+    }
+
+    this.messages.push(msg)
+    this.saveToLocal()
+    this.emitCallback(this.getMessages())
+  }
+
+  public destroy() {
+    if (this.inputField && this.inputHandler && this.keydownHandler) {
+      this.inputField.removeEventListener('input', this.inputHandler)
+      this.inputField.removeEventListener('keydown', this.keydownHandler)
+    }
+    if (this.sendButton && this.clickHandler) {
+      this.sendButton.removeEventListener('click', this.clickHandler)
+    }
   }
 }
 
-export default ChatCore
+export default CustomerServiceChatCore
